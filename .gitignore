@@ -1,0 +1,21 @@
+```gitignore
+# Environment
+.env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# LangGraph runtime files
+.langgraph_api/
+*.pckl
+
+# OS/editor
+.DS_Store
+.vscode/
+
+# Optional
+dist/
+build/
+```
