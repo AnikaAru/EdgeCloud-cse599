@@ -11,7 +11,7 @@ model = ChatOpenAI(
     base_url=os.getenv("OPENROUTER_BASE_URL"),
 )
 
-agent = create_react_agent(
+router_agent = create_react_agent(
     model=model,
     tools=[],
     # this is just an example, we can look into prompt engineering + customing it for each agent
