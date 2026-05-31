@@ -49,6 +49,7 @@ def run_edge_coding_task(
         f"repo_root: {repo_root_hint or '.'}\n"
         f"task: {task}\n"
         f"language: {language}\n"
+        f"existing_files:\n{read_repo_summary(work.path)[:6000]}\n"
     )
     resp = edge_coding_agent.invoke({"messages": [{"role": "user", "content": content}]})
     raw = resp["messages"][-1].content

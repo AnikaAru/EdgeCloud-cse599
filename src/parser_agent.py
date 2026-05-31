@@ -3,6 +3,7 @@ import json
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from src.json_utils import clean_json_response
 
 load_dotenv()
 
@@ -12,6 +13,23 @@ model = ChatOpenAI(
     base_url=os.getenv("OPENROUTER_BASE_URL"),
     temperature=0,
 )
+
+def clean_json_response(text: str) -> dict:
+    text = text.strip()
+
+    if not text:
+        raise ValueError("Parser returned empty response.")
+
+    if text.startswith("```"):
+        text = text.replace("```json", "").replace("```", "").strip()
+
+    start = text.find("{")
+    end = text.rfind("}")
+
+    if start == -1 or end == -1:
+        raise ValueError(f"No JSON object found in parser response:\n{text}")
+
+    return json.loads(text[start:end + 1])
 
 def parser_agent(task_text: str, repo_context: str) -> dict:
     response = model.invoke([
@@ -43,4 +61,4 @@ REPO CONTEXT:
 """)
     ])
 
-    return json.loads(response.content)
+    return clean_json_response(response.content)

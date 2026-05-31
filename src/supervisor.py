@@ -15,8 +15,9 @@ from typing import Annotated, Literal, TypedDict
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
+from src.json_utils import clean_json_response
 
-# ── Import your existing agents ──────────────────────────────────────────────
+# agents
 from src.github_agent import github_agent
 from src.parser_agent import parser_agent
 from src.router_agent import router_agent
@@ -25,46 +26,39 @@ from src.edge_coding_executor import run_edge_coding_task
 
 load_dotenv()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Input schema — ONLY these two fields show up in Studio's input panel
-# ─────────────────────────────────────────────────────────────────────────────
+# Input schema,  only these two fields show up in Studio's input panel, so these allow user to start workflow
 
 class InputState(TypedDict):
     repo_url: str    # e.g. https://github.com/your-org/your-repo
     task_text: str   # e.g. "Add docstrings to all functions in utils.py"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Full internal state — all keys, most populated by agents during the run
-# ─────────────────────────────────────────────────────────────────────────────
+# internal state — all keys, which are mostly agents during the run
 
 class AgentState(TypedDict, total=False):
-    # ── Inputs ────────────────────────────────────────────────────────────────
-    repo_url: str          # supplied by the caller
-    task_text: str         # user's natural-language task
+    # Inputs
+    repo_url: str          
+    task_text: str        
 
-    # ── github_agent outputs ──────────────────────────────────────────────────
+    # github_agent outputs 
     repo_path: str
     repo_context: str
 
-    # ── parser_agent outputs ──────────────────────────────────────────────────
-    parsed_task: dict      # structured JSON from the parser
+    # parser_agent outputs 
+    parsed_task: dict   
 
-    # ── router_agent outputs ──────────────────────────────────────────────────
+    # router_agent outputs 
     routing: str           # LOCAL | CLOUD | CONFIRM | BLOCKED
     router_scores: dict    # {privacy, security, complexity, latency, reason}
 
-    # ── edge agent outputs ────────────────────────────────────────────────────
-    final_answer: str      # prose answer (edge_answer_agent)
-    coding_result: dict    # branch/files/summary (edge_coding_executor)
+    # edge agent outputs
+    final_answer: str     
+    coding_result: dict   
 
-    # ── human-in-the-loop ────────────────────────────────────────────────────
     user_confirmation: bool | None   # set externally when routing == CONFIRM
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Node implementations — each wraps an existing agent
-# ─────────────────────────────────────────────────────────────────────────────
 
 def node_github(state: AgentState) -> AgentState:
     """Clone / update the repo and build a context snapshot."""
@@ -95,7 +89,7 @@ def node_router(state: AgentState) -> AgentState:
     )
     resp = router_agent.invoke({"messages": [HumanMessage(content=prompt)]})
     raw = resp["messages"][-1].content
-    scores = json.loads(raw)
+    scores = clean_json_response(raw)
     return {
         **state,
         "routing": scores["routing"],
@@ -130,7 +124,7 @@ def node_edge_coding(state: AgentState) -> AgentState:
             "written_files": result.written_files,
         },
         "final_answer": (
-            f"✅ Changes committed to branch `{result.branch}`.\n\n"
+            f"Changes committed to branch `{result.branch}`.\n\n"
             f"{result.summary}\n\n"
             f"Files modified: {', '.join(result.written_files)}"
         ),
@@ -142,7 +136,7 @@ def node_blocked(state: AgentState) -> AgentState:
     reason = state.get("router_scores", {}).get("reason", "Security or privacy risk.")
     return {
         **state,
-        "final_answer": f"🚫 Task blocked by safety policy.\nReason: {reason}",
+        "final_answer": f"Task blocked by safety policy.\nReason: {reason}",
     }
 
 
@@ -166,17 +160,17 @@ def node_confirm(state: AgentState) -> AgentState:
     if confirmed is False:
         return {
             **state,
-            "final_answer": "🛑 Task cancelled by user.",
+            "final_answer": "Task cancelled by user.",
         }
 
     # confirmed is None → surface the prompt to the caller
     print(
-        "\n⚠️  CONFIRMATION REQUIRED\n"
+        "\n CONFIRMATION REQUIRED\n"
         f"Reason: {reason}\n"
         "Set `user_confirmation=True` in state to proceed, "
         "or `False` to abort.\n"
     )
-    return {**state, "final_answer": f"⏸️  Waiting for confirmation.\nReason: {reason}"}
+    return {**state, "final_answer": f"Waiting for confirmation.\nReason: {reason}"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
