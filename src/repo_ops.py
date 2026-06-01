@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
+from src.json_utils import clean_json_response
+
 
 
 class RepoOpError(RuntimeError):
@@ -82,7 +84,7 @@ def commit_all(repo_dir: str, message: str) -> None:
 
 
 def push_branch(repo_dir: str, branch_name: str, remote: str = "origin") -> None:
-    _run(["git", "push", "-u", remote, branch_name], cwd=repo_dir)
+    _run(["git", "push", "--force", "-u", remote, branch_name], cwd=repo_dir)
 
 
 def load_edge_coding_json(text: str) -> dict:
@@ -93,7 +95,7 @@ def load_edge_coding_json(text: str) -> dict:
     """
     text = text.strip()
     try:
-        return json.loads(text)
+        return clean_json_response(text)
     except json.JSONDecodeError:
         # Best-effort extraction
         m = re.search(r"\{[\s\S]*\}\s*$", text)

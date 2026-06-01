@@ -63,7 +63,7 @@ class AgentState(TypedDict, total=False):
 def node_github(state: AgentState) -> AgentState:
     """Clone / update the repo and build a context snapshot."""
     result = github_agent(state["repo_url"])
-    return {**state, **result}          # repo_path + repo_context injected
+    return {**state, **result}         
 
 
 def node_parser(state: AgentState) -> AgentState:
@@ -154,7 +154,7 @@ def node_confirm(state: AgentState) -> AgentState:
     reason = state.get("router_scores", {}).get("reason", "")
 
     if confirmed is True:
-        # Re-route now that human approved; treat as LOCAL
+        # Reroute now that human approved, treat as LOCAL
         return {**state, "routing": "LOCAL"}
 
     if confirmed is False:
@@ -163,7 +163,7 @@ def node_confirm(state: AgentState) -> AgentState:
             "final_answer": "Task cancelled by user.",
         }
 
-    # confirmed is None → surface the prompt to the caller
+    # confirmed is None, show the prompt to the caller
     print(
         "\n CONFIRMATION REQUIRED\n"
         f"Reason: {reason}\n"
@@ -173,9 +173,7 @@ def node_confirm(state: AgentState) -> AgentState:
     return {**state, "final_answer": f"Waiting for confirmation.\nReason: {reason}"}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Routing / conditional edges
-# ─────────────────────────────────────────────────────────────────────────────
 
 def route_after_router(
     state: AgentState,
@@ -202,10 +200,7 @@ def route_after_confirm(
     will_modify = state.get("parsed_task", {}).get("will_modify_repo", False)
     return "edge_coding" if will_modify else "edge_answer"
 
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Build the graph
-# ─────────────────────────────────────────────────────────────────────────────
 
 def build_graph() -> StateGraph:
     g = StateGraph(AgentState, input=InputState)
@@ -255,13 +250,10 @@ def build_graph() -> StateGraph:
     return g
 
 
-# Compiled graph — import this in run.py or FastAPI routes
 graph = build_graph().compile()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # Helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _infer_language(parsed: dict) -> str:
     caps = " ".join(parsed.get("required_capabilities", [])).lower()

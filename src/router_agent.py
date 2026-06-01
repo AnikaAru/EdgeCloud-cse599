@@ -14,7 +14,6 @@ model = ChatOpenAI(
 router_agent = create_react_agent(
     model=model,
     tools=[],
-    # this is just an example, we can look into prompt engineering + customing it for each agent
     prompt="""You are a runtime monitor for AI agent workflows.
 When given a task, evaluate it on four dimensions (score 0-10):
 1. Privacy Sensitivity: Does it involve local files, passwords, or personal data?
